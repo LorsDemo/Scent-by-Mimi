@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scent by Mimi</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel:wght@400;600&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --ivory: #faf7f2;
+    --black: #0a0905;
+    --gold: #b8935a;
+    --gold-light: #d4ad7a;
+    --gold-muted: #8a6d3e;
+    --warm-gray: #2a2520;
+    --text-mid: #6b5f52;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--cream);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom Cursor */
+  .cursor {
+    position: fixed;
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s ease;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 32px; height: 32px;
+    border: 1px solid rgba(184,147,90,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: left 0.12s ease, top 0.12s ease, width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 60px;
+    mix-blend-mode: normal;
+    transition: background 0.4s ease, padding 0.4s ease;
+  }
+  nav.scrolled {
+    background: rgba(10,9,5,0.95);
+    padding: 18px 60px;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(184,147,90,0.15);
+  }
+  .nav-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .nav-logo span {
+    color: var(--cream);
+    font-weight: 400;
+  }
+  .nav-links {
+    display: flex;
+    gap: 44px;
+    list-style: none;
+  }
+  .nav-links a {
+    color: var(--cream);
+    text-decoration: none;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    transition: opacity 0.3s, color 0.3s;
+  }
+  .nav-links a:hover { opacity: 1; color: var(--gold-light); }
+  .nav-cart {
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    cursor: pointer;
+    opacity: 0.9;
+    transition: opacity 0.3s;
+  }
+  .nav-cart:hover { opacity: 1; }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 80% at 70% 50%, rgba(184,147,90,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 30% 30%, rgba(184,147,90,0.05) 0%, transparent 60%),
+      linear-gradient(135deg, #0a0905 0%, #12100a 50%, #0e0c08 100%);
+  }
+  .hero-grain {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .hero-lines {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(184,147,90,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(184,147,90,0.04) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 0 60px;
+    max-width: 680px;
+    animation: fadeUp 1.4s cubic-bezier(0.16,1,0.3,1) forwards;
+    opacity: 0;
+  }
+  .hero-eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--gold);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(3.5rem, 8vw, 7rem);
+    font-weight: 300;
+    line-height: 1.0;
+    letter-spacing: -0.01em;
+    color: var(--ivory);
+    margin-bottom: 8px;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--gold-light);
+  }
+  .hero-sub {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+    font-weight: 300;
+    font-style: italic;
+    color: var(--text-mid);
+    margin-bottom: 48px;
+    line-height: 1.4;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  .btn-primary {
+    background: var(--gold);
+    color: var(--black);
+    border: none;
+    padding: 16px 40px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.3s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: var(--gold-light); transform: translateY(-2px); }
+  .btn-ghost {
+    color: var(--cream);
+    text-decoration: none;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.65;
+    transition: opacity 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn-ghost::after {
+    content: '→';
+    font-size: 1rem;
+    transition: transform 0.3s;
+  }
+  .btn-ghost:hover { opacity: 1; }
+  .btn-ghost:hover::after { transform: translateX(4px); }
+
+  .hero-visual {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 52%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 1.8s 0.3s cubic-bezier(0.16,1,0.3,1) forwards;
+    opacity: 0;
+  }
+  .bottle-scene {
+    position: relative;
+    width: 340px;
+    height: 500px;
+  }
+  .bottle-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 280px;
+    height: 380px;
+    background: radial-gradient(ellipse, rgba(184,147,90,0.18) 0%, transparent 70%);
+    animation: pulse 4s ease-in-out infinite;
+  }
+  /* SVG Bottle */
+  .bottle-svg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 20px 60px rgba(184,147,90,0.25));
+    animation: float 6s ease-in-out infinite;
+  }
+
+  /* MARQUEE */
+  .marquee-wrap {
+    overflow: hidden;
+    border-top: 1px solid rgba(184,147,90,0.2);
+    border-bottom: 1px solid rgba(184,147,90,0.2);
+    padding: 18px 0;
+    background: rgba(184,147,90,0.03);
+  }
+  .marquee-track {
+    display: flex;
+    gap: 0;
+    animation: marquee 22s linear infinite;
+    white-space: nowrap;
+  }
+  .marquee-item {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold-muted);
+    padding: 0 60px;
+    display: flex;
+    align-items: center;
+    gap: 60px;
+  }
+  .marquee-item::after {
+    content: '✦';
+    color: var(--gold);
+    font-size: 0.5rem;
+  }
+/* COLLECTION */
+  .section { padding: 120px 60px; }
+  .section-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--gold);
+  }
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.2rem, 5vw, 4rem);
+    font-weight: 300;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .section-title em {
+    font-style: italic;
+    color: var(--gold-light);
+  }
+
+  .collection-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+  }
+  .product-card {
+    background: var(--warm-gray);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    group: true;
+  }
+  .product-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 40%, rgba(10,9,5,0.9) 100%);
+    z-index: 1;
+    transition: opacity 0.4s;
+  }
+  .product-card:hover::before {
+    background: linear-gradient(180deg, transparent 20%, rgba(10,9,5,0.95) 100%);
+  }
+  .product-visual {
+    height: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.6s cubic-bezier(0.16,1,0.3,1);
+    position: relative;
+  }
+  .product-card:hover .product-visual { transform: scale(1.04); }
+  .product-bg-1 { background: linear-gradient(135deg, #1a1510 0%, #2a1f10 50%, #1a1208 100%); }
+  .product-bg-2 { background: linear-gradient(135deg, #10141a 0%, #101820 50%, #0a1018 100%); }
+  .product-bg-3 { background: linear-gradient(135deg, #1a1018 0%, #200a18 50%, #180810 100%); }
+
+  .product-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 32px;
+    z-index: 2;
+    transform: translateY(8px);
+    transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+  }
+  .product-card:hover .product-info { transform: translateY(0); }
+  .product-category {
+    font-size: 0.62rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .product-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 300;
+    color: var(--ivory);
+    margin-bottom: 6px;
+  }
+  .product-desc {
+    font-size: 0.78rem;
+    color: rgba(245,240,232,0.55);
+    margin-bottom: 20px;
+    line-height: 1.6;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.4s ease;
+    opacity: 0;
+  }
+  .product-card:hover .product-desc { max-height: 60px; opacity: 1; }
+  .product-price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .product-price {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem;
+    font-weight: 400;
+    color: var(--gold-light);
+  }
+  .add-btn {
+    background: transparent;
+    border: 1px solid rgba(184,147,90,0.4);
+    color: var(--gold-light);
+    padding: 10px 22px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .add-btn:hover {
+    background: var(--gold);
+    color: var(--black);
+    border-color: var(--gold);
+  }
+
+  /* FEATURE STRIP */
+  .feature-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: rgba(184,147,90,0.15);
+    border-top: 1px solid rgba(184,147,90,0.15);
+    border-bottom: 1px solid rgba(184,147,90,0.15);
+  }
+  .feature-item {
+    background: var(--black);
+    padding: 48px 40px;
+    text-align: center;
+    transition: background 0.3s;
+  }
+  .feature-item:hover { background: rgba(184,147,90,0.04); }
+  .feature-icon {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+    color: var(--gold);
+  }
+  .feature-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    color: var(--cream);
+    margin-bottom: 10px;
+  }
+  .feature-text {
+    font-size: 0.75rem;
+    color: var(--text-mid);
+    line-height: 1.7;
+  }
+
+  /* EDITORIAL */
+  .editorial {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 600px;
+  }
+  .editorial-image {
+    background:
+      radial-gradient(ellipse 60% 70% at 50% 40%, rgba(184,147,90,0.12) 0%, transparent 70%),
+      linear-gradient(160deg, #1a1208 0%, #0e0c08 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .editorial-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 70%, var(--black) 100%);
+  }
+  .editorial-content {
+    padding: 80px 80px 80px 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: var(--black);
+  }
+  .editorial-quote {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--cream);
+    margin-bottom: 32px;
+    opacity: 0.9;
+  }
+  .editorial-author {
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 48px;
+  }
+  .editorial-body {
+    font-size: 0.85rem;
+    line-height: 1.9;
+    color: var(--text-mid);
+    margin-bottom: 40px;
+    max-width: 480px;
+  }
+
+  /* NOTES SECTION */
+  .notes-section {
+    padding: 120px 60px;
+    text-align: center;
+  }
+  .notes-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 300;
+    margin-bottom: 16px;
+  }
+  .notes-sub {
+    font-size: 0.85rem;
+    color: var(--text-mid);
+    margin-bottom: 72px;
+    letter-spacing: 0.05em;
+  }
+  .notes-pyramid {
+    display: flex;
+    gap: 2px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .note-tier {
+    flex: 1;
+    background: var(--warm-gray);
+    padding: 48px 32px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .note-tier:hover { background: rgba(184,147,90,0.06); }
+  .note-tier-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+  .note-tier-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem;
+    font-weight: 300;
+    margin-bottom: 12px;
+    color: var(--ivory);
+  }
+  .note-items {
+    font-size: 0.78rem;
+    color: var(--text-mid);
+    line-height: 2.0;
+  }
+  .note-divider {
+    width: 1px;
+    background: rgba(184,147,90,0.15);
+  }
+
+  /* TESTIMONIALS */
+  .testimonials { padding: 100px 60px; }
+  .test-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+  }
+  .test-card {
+    background: var(--warm-gray);
+    padding: 48px 40px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .test-card:hover { background: rgba(184,147,90,0.05); }
+  .test-stars {
+    color: var(--gold);
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+  }
+  .test-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--cream);
+    margin-bottom: 28px;
+    opacity: 0.9;
+  }
+  .test-name {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-muted);
+  }
+
+  /* NEWSLETTER */
+  .newsletter {
+    padding: 100px 60px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--black) 0%, var(--warm-gray) 50%, var(--black) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .newsletter::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(184,147,90,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .newsletter-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 300;
+    margin-bottom: 16px;
+  }
+  .newsletter-sub {
+    font-size: 0.82rem;
+    color: var(--text-mid);
+    margin-bottom: 48px;
+    letter-spacing: 0.05em;
+  }
+  .newsletter-form {
+    display: flex;
+    gap: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    border: 1px solid rgba(184,147,90,0.3);
+  }
+  .newsletter-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 18px 24px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    color: var(--cream);
+    outline: none;
+    letter-spacing: 0.05em;
+  }
+  .newsletter-input::placeholder { color: rgba(245,240,232,0.3); }
+  .newsletter-btn {
+    background: var(--gold);
+    color: var(--black);
+    border: none;
+    padding: 18px 32px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.3s;
+    white-space: nowrap;
+  }
+  .newsletter-btn:hover { background: var(--gold-light); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid rgba(184,147,90,0.15);
+    padding: 60px 60px 40px;
+  }
+  .footer-top {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 60px;
+    margin-bottom: 60px;
+  }
+  .footer-brand {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  .footer-brand span { color: var(--cream); font-weight: 400; }
+  .footer-tagline {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--text-mid);
+    line-height: 1.7;
+  }
+  .footer-col-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold-muted);
+    margin-bottom: 24px;
+  }
+  .footer-links { list-style: none; }
+  .footer-links li { margin-bottom: 14px; }
+  .footer-links a {
+    color: var(--text-mid);
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: color 0.3s;
+    letter-spacing: 0.03em;
+  }
+  .footer-links a:hover { color: var(--cream); }
+  .footer-bottom {
+    border-top: 1px solid rgba(184,147,90,0.1);
+    padding-top: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-copy {
+    font-size: 0.72rem;
+    color: rgba(107,95,82,0.6);
+    letter-spacing: 0.05em;
+  }
+  .footer-socials {
+    display: flex;
+    gap: 24px;
+  }
+  .footer-socials a {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-mid);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  .footer-socials a:hover { color: var(--gold); }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+    50% { transform: translate(-50%, -50%) translateY(-18px); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* SCROLL REVEAL */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">SCENT <span>BY MIMI</span></a>
+  <ul class="nav-links">
+    <li><a href="#collection">Collection</a></li>
+    <li><a href="#story">Our Story</a></li>
+    <li><a href="#notes">Notes</a></li>
+    <li><a href="#journal">Journal</a></li>
+  </ul>
+  <div class="nav-cart">Bag (0)</div>
+</nav><!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grain"></div>
+  <div class="hero-lines"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">New Collection 2026</div>
+    <h1>Where <em>Memory</em><br>Becomes<br>Fragrance</h1>
+    <p class="hero-sub">Rare ingredients, handcrafted in Paris.<br>A scent for every story.</p>
+    <div class="hero-actions">
+      <a href="#collection" class="btn-primary">Explore Collection</a>
+      <a href="#story" class="btn-ghost">Our Philosophy</a>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="bottle-scene">
+      <div class="bottle-glow"></div>
+      <!-- Elegant Cologne Bottle SVG -->
+      <svg class="bottle-svg" width="180" height="320" viewBox="0 0 180 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Cap -->
+        <rect x="72" y="8" width="36" height="48" rx="4" fill="#1a1510" stroke="#b8935a" stroke-width="0.8"/>
+        <rect x="78" y="56" width="24" height="10" rx="2" fill="#b8935a" opacity="0.9"/>
+        <!-- Neck -->
+        <rect x="76" y="62" width="28" height="18" rx="2" fill="#1e1a12"/>
+        <rect x="76" y="62" width="28" height="18" rx="2" stroke="#b8935a" stroke-width="0.5" opacity="0.6"/>
+        <!-- Shoulder -->
+        <path d="M60 80 Q60 76 76 76 L104 76 Q120 76 120 80 L126 100 H54 Z" fill="#1e1a12"/>
+        <path d="M60 80 Q60 76 76 76 L104 76 Q120 76 120 80 L126 100 H54 Z" stroke="#b8935a" stroke-width="0.5" opacity="0.5"/>
+        <!-- Body -->
+        <path d="M54 100 H126 L130 280 Q130 288 122 288 H58 Q50 288 50 280 Z" fill="url(#bodyGrad)"/>
+        <path d="M54 100 H126 L130 280 Q130 288 122 288 H58 Q50 288 50 280 Z" stroke="#b8935a" stroke-width="0.6" opacity="0.6"/>
+        <!-- Liquid inside -->
+        <path d="M58 110 H122 L126 270 Q126 280 118 280 H62 Q54 280 54 270 Z" fill="url(#liquidGrad)" opacity="0.65"/>
+        <!-- Label area -->
+        <rect x="60" y="150" width="60" height="90" rx="2" fill="none" stroke="#b8935a" stroke-width="0.5" opacity="0.4"/>
+        <!-- Label text lines -->
+        <line x1="68" y1="170" x2="112" y2="170" stroke="#b8935a" stroke-width="0.6" opacity="0.5"/>
+        <text x="90" y="192" text-anchor="middle" font-family="Cinzel, serif" font-size="7" fill="#b8935a" opacity="0.8" letter-spacing="1">SCENT</text>
+        <text x="90" y="205" text-anchor="middle" font-family="Cinzel, serif" font-size="5" fill="#b8935a" opacity="0.6" letter-spacing="1.5">BY MIMI</text>
+        <line x1="68" y1="218" x2="112" y2="218" stroke="#b8935a" stroke-width="0.6" opacity="0.5"/>
+        <!-- Reflection -->
+        <path d="M60 110 L68 110 L70 260 L60 265 Z" fill="white" opacity="0.04"/>
+        <!-- Bottom base -->
+        <rect x="50" y="284" width="80" height="6" rx="3" fill="#2a1f10" opacity="0.8"/>
+        <!-- Neck ring detail -->
+        <rect x="74" y="74" width="32" height="3" rx="1" fill="#b8935a" opacity="0.4"/>
+        <!-- Cap top decoration -->
+        <rect x="80" y="10" width="20" height="3" rx="1" fill="#b8935a" opacity="0.3"/>
+        <defs>
+          <linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#16130c"/>
+            <stop offset="35%" stop-color="#2a2318"/>
+            <stop offset="65%" stop-color="#1e1a12"/>
+            <stop offset="100%" stop-color="#0e0c08"/>
+          </linearGradient>
+          <linearGradient id="liquidGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#c4915a"/>
+            <stop offset="50%" stop-color="#8a5c28"/>
+            <stop offset="100%" stop-color="#5a3010"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee-track">
+    <span class="marquee-item">Handcrafted in Paris</span>
+    <span class="marquee-item">Rare Natural Ingredients</span>
+    <span class="marquee-item">Luxury Cologne</span>
+    <span class="marquee-item">Timeless Elegance</span>
+    <span class="marquee-item">Scent by Mimi</span>
+    <span class="marquee-item">Long-Lasting Formulas</span>
+    <span class="marquee-item">Artisan Craftsmanship</span>
+    <span class="marquee-item">Handcrafted in Paris</span>
+    <span class="marquee-item">Rare Natural Ingredients</span>
+    <span class="marquee-item">Luxury Cologne</span>
+    <span class="marquee-item">Timeless Elegance</span>
+    <span class="marquee-item">Scent by Mimi</span>
+    <span class="marquee-item">Long-Lasting Formulas</span>
+    <span class="marquee-item">Artisan Craftsmanship</span>
+  </div>
+</div>
+
+<!-- COLLECTION -->
+<section class="section" id="collection">
+  <div class="reveal">
+    <div class="section-label">The Collection</div>
+    <h2 class="section-title">Signature <em>Fragrances</em></h2>
+  </div>
+  <div class="collection-grid reveal">
+    <!-- Card 1 -->
+    <div class="product-card">
+      <div class="product-visual product-bg-1">
+        <svg width="110" height="200" viewBox="0 0 180 320" fill="none" style="filter:drop-shadow(0 8px 30px rgba(184,147,90,0.3))">
+          <rect x="72" y="8" width="36" height="48" rx="4" fill="#1a1510" stroke="#b8935a" stroke-width="1"/>
+          <rect x="78" y="56" width="24" height="10" rx="2" fill="#b8935a"/>
+          <rect x="76" y="62" width="28" height="18" rx="2" fill="#1e1a12" stroke="#b8935a" stroke-width="0.5"/>
+          <path d="M60 80 Q60 76 76 76 L104 76 Q120 76 120 80 L126 100 H54 Z" fill="#1e1a12" stroke="#b8935a" stroke-width="0.5"/>
+          <path d="M54 100 H126 L130 280 Q130 288 122 288 H58 Q50 288 50 280 Z" fill="url(#b1)" stroke="#c4915a" stroke-width="0.8"/>
+          <path d="M58 110 H122 L126 270 Q126 280 118 280 H62 Q54 280 54 270 Z" fill="url(#l1)" opacity="0.6"/>
+          <rect x="60" y="155" width="60" height="80" fill="none" stroke="#c4915a" stroke-width="0.5" opacity="0.5"/>
+          <text x="90" y="192" text-anchor="middle" font-family="Cinzel" font-size="7" fill="#c4915a" opacity="0.9" letter-spacing="1">AMBRE</text>
+          <text x="90" y="204" text-anchor="middle" font-family="Cinzel" font-size="4.5" fill="#c4915a" opacity="0.6" letter-spacing="1.5">NOIR</text>
+          <defs>
+            <linearGradient id="b1" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#1a160e"/><stop offset="40%" stop-color="#2e2516"/><stop offset="100%" stop-color="#0e0c08"/>
+            </linearGradient>
+            <linearGradient id="l1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#d4913a"/><stop offset="100%" stop-color="#6a3810"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="product-info">
+        <div class="product-category">Woody Amber</div>
+        <div class="product-name">Ambre Noir</div>
+        <div class="product-desc">Dark amber, oud wood, and warm vanilla — an intimate night in a bottle.</div>
+        <div class="product-price-row">
+          <div class="product-price">$185</div>
+          <button class="add-btn">Add to Bag</button>
+        </div>
+      </div>
+    </div>
+    <!-- Card 2 -->
+    <div class="product-card">
+      <div class="product-visual product-bg-2">
+        <svg width="110" height="200" viewBox="0 0 180 320" fill="none" style="filter:drop-shadow(0 8px 30px rgba(90,140,184,0.25))">
+          <rect x="72" y="8" width="36" height="48" rx="4" fill="#0a1018" stroke="#6a9abf" stroke-width="1"/>
+          <rect x="78" y="56" width="24" height="10" rx="2" fill="#6a9abf"/>
+          <rect x="76" y="62" width="28" height="18" rx="2" fill="#0e1620" stroke="#6a9abf" stroke-width="0.5"/>
+          <path d="M60 80 Q60 76 76 76 L104 76 Q120 76 120 80 L126 100 H54 Z" fill="#0e1620" stroke="#6a9abf" stroke-width="0.5"/>
+          <path d="M54 100 H126 L130 280 Q130 288 122 288 H58 Q50 288 50 280 Z" fill="url(#b2)" stroke="#6a9abf" stroke-width="0.8"/>
+          <path d="M58 110 H122 L126 270 Q126 280 118 280 H62 Q54 280 54 270 Z" fill="url(#l2)" opacity="0.55"/>
+          <rect x="60" y="155" width="60" height="80" fill="none" stroke="#6a9abf" stroke-width="0.5" opacity="0.5"/>
+          <text x="90" y="192" text-anchor="middle" font-family="Cinzel" font-size="6.5" fill="#6a9abf" opacity="0.9" letter-spacing="1">BRUME</text>
+          <text x="90" y="204" text-anchor="middle" font-family="Cinzel" font-size="4.5" fill="#6a9abf" opacity="0.6" letter-spacing="1.5">MARINE</text>
+          <defs>
+            <linearGradient id="b2" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#0a1018"/><stop offset="40%" stop-color="#101e2a"/><stop offset="100%" stop-color="#080c10"/>
+            </linearGradient>
+            <linearGradient id="l2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#4a8fbf"/><stop offset="100%" stop-color="#1a3a5a"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="product-info">
+        <div class="product-category">Aquatic Fresh</div>
+        <div class="product-name">Brume Marine</div>
+        <div class="product-desc">Sea salt, bergamot, and driftwood — the open ocean on your skin.</div>
+        <div class="product-price-row">
+          <div class="product-price">$165</div>
+          <button class="add-btn">Add to Bag</button>
+        </div>
+      </div>
+    </div>
+    <!-- Card 3 -->
+    <div class="product-card">
+      <div class="product-visual product-bg-3">
+        <svg width="110" height="200" viewBox="0 0 180 320" fill="none" style="filter:drop-shadow(0 8px 30px rgba(184,90,140,0.25))">
+          <rect x="72" y="8" width="36" height="48" rx="4" fill="#180810" stroke="#bf6a9a" stroke-width="1"/>
+          <rect x="78" y="56" width="24" height="10" rx="2" fill="#bf6a9a"/>
+          <rect x="76" y="62" width="28" height="18" rx="2" fill="#1e0e18" stroke="#bf6a9a" stroke-width="0.5"/>
+          <path d="M60 80 Q60 76 76 76 L104 76 Q120 76 120 80 L126 100 H54 Z" fill="#1e0e18" stroke="#bf6a9a" stroke-width="0.5"/>
+          <path d="M54 100 H126 L130 280 Q130 288 122 288 H58 Q50 288 50 280 Z" fill="url(#b3)" stroke="#bf6a9a" stroke-width="0.8"/>
+          <path d="M58 110 H122 L126 270 Q126 280 118 280 H62 Q54 280 54 270 Z" fill="url(#l3)" opacity="0.55"/>
+          <rect x="60" y="155" width="60" height="80" fill="none" stroke="#bf6a9a" stroke-width="0.5" opacity="0.5"/>
+          <text x="90" y="192" text-anchor="middle" font-family="Cinzel" font-size="6" fill="#bf6a9a" opacity="0.9" letter-spacing="1">ROSE</text>
+          <text x="90" y="204" text-anchor="middle" font-family="Cinzel" font-size="4.5" fill="#bf6a9a" opacity="0.6" letter-spacing="1.5">ABSOLUE</text>
+          <defs>
+            <linearGradient id="b3" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#180810"/><stop offset="40%" stop-color="#2a1020"/><stop offset="100%" stop-color="#100808"/>
+            </linearGradient>
+            <linearGradient id="l3" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#c4608a"/><stop offset="100%" stop-color="#6a2040"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="product-info">
+        <div class="product-category">Floral Oriental</div>
+        <div class="product-name">Rose Absolue</div>
+        <div class="product-desc">Bulgarian rose, iris, and white musk — softness with an undeniable depth.</div>
+        <div class="product-price-row">
+          <div class="product-price">$210</div>
+          <button class="add-btn">Add to Bag</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE STRIP -->
+<div class="feature-strip reveal">
+  <div class="feature-item">
+    <div class="feature-icon">◈</div>
+    <div class="feature-title">Rare Ingredients</div>
+    <div class="feature-text">Sourced from Grasse, Oman & Madagascar for unmatched quality</div>
+  </div>
+  <div class="feature-item">
+    <div class="feature-icon">◎</div>
+    <div class="feature-title">Long-Lasting</div>
+    <div class="feature-text">12–18 hour sillage with our proprietary fixative formula</div>
+  </div>
+  <div class="feature-item">
+    <div class="feature-icon">◇</div>
+    <div class="feature-title">Complimentary Shipping</div>
+    <div class="feature-text">Free worldwide shipping on orders over $150</div>
+  </div>
+  <div class="feature-item">
+    <div class="feature-icon">◉</div>
+    <div class="feature-title">Cruelty Free</div>
+    <div class="feature-text">100% ethical, never tested on animals. PETA certified.</div>
+  </div>
+</div>
+
+<!-- EDITORIAL / STORY -->
+<section class="editorial" id="story">
+  <div class="editorial-image">
+    <!-- Decorative composition -->
+    <svg width="400" height="500" viewBox="0 0 400 500" fill="none" style="position:relative;z-index:1">
+      <circle cx="200" cy="250" r="140" stroke="#b8935a" stroke-width="0.5" opacity="0.2"/>
+      <circle cx="200" cy="250" r="100" stroke="#b8935a" stroke-width="0.5" opacity="0.15"/>
+      <circle cx="200" cy="250" r="60" stroke="#b8935a" stroke-width="0.5" opacity="0.1"/>
+      <line x1="60" y1="250" x2="340" y2="250" stroke="#b8935a" stroke-width="0.3" opacity="0.2"/>
+      <line x1="200" y1="110" x2="200" y2="390" stroke="#b8935a" stroke-width="0.3" opacity="0.2"/>
+      <!-- Large bottle -->
+      <g transform="translate(130, 60)">
+        <rect x="54" y="6" width="28" height="38" rx="3" fill="#1a1510" stroke="#b8935a" stroke-width="0.8"/>
+        <rect x="58" y="44" width="20" height="8" rx="1" fill="#b8935a" opacity="0.8"/>
+        <rect x="56" y="50" width="24" height="14" rx="2" fill="#1e1a12" stroke="#b8935a" stroke-width="0.4"/>
+        <path d="M44 64 Q44 60 58 60 L78 60 Q92 60 92 64 L97 80 H39 Z" fill="#1e1a12" stroke="#b8935a" stroke-width="0.4"/>
+        <path d="M39 80 H97 L100 222 Q100 228 94 228 H42 Q36 228 36 222 Z" fill="url(#ebg)" stroke="#b8935a" stroke-width="0.6"/>
+        <path d="M42 88 H95 L98 215 Q98 222 92 222 H44 Q38 222 38 215 Z" fill="url(#eliq)" opacity="0.55"/>
+        <rect x="44" y="122" width="48" height="68" fill="none" stroke="#b8935a" stroke-width="0.5" opacity="0.4"/>
+        <text x="68" y="153" text-anchor="middle" font-family="Cinzel" font-size="6" fill="#b8935a" opacity="0.9" letter-spacing="1">SCENT</text>
+        <text x="68" y="164" text-anchor="middle" font-family="Cinzel" font-size="4" fill="#b8935a" opacity="0.6" letter-spacing="1.5">BY MIMI</text>
+      </g>
+      <defs>
+        <linearGradient id="ebg" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#16130c"/><stop offset="40%" stop-color="#2e2518"/><stop offset="100%" stop-color="#0e0c08"/>
+        </linearGradient>
+        <linearGradient id="eliq" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#c4915a"/><stop offset="100%" stop-color="#5a3010"/>
+        </linearGradient>
+      </defs>
+      <!-- Small dots -->
+      <circle cx="100" cy="140" r="2" fill="#b8935a" opacity="0.4"/>
+      <circle cx="300" cy="360" r="2" fill="#b8935a" opacity="0.4"/>
+      <circle cx="280" cy="130" r="1.5" fill="#b8935a" opacity="0.3"/>
+      <circle cx="110" cy="370" r="1.5" fill="#b8935a" opacity="0.3"/>
+    </svg>
+  </div>
+  <div class="editorial-content reveal">
+    <div class="section-label">Our Philosophy</div>
+    <p class="editorial-quote">"A great fragrance is not worn — it is lived in."</p>
+    <div class="editorial-author">— Mimi Laurent, Founder</div>
+    <p class="editorial-body">Born in Grasse, the perfume capital of the world, Mimi Laurent spent two decades learning the ancient art of fragrance creation from master perfumers. Scent by Mimi is the culmination of that journey — a house dedicated to creating timeless, wearable art that speaks to the senses and touches the soul.</p>
+    <p class="editorial-body">Every bottle is an intimate story. Every spritz, a memory waiting to be made.</p>
+    <a href="#" class="btn-primary">Read Our Story</a>
+  </div>
+</section>
+
+<!-- NOTES PYRAMID -->
+<section class="notes-section" id="notes">
+  <div class="reveal">
+    <div class="section-label" style="justify-content:center">Fragrance Notes</div>
+    <h2 class="notes-title">The Art of <em>Composition</em></h2>
+    <p class="notes-sub">Every fragrance is built in three acts — a beginning, a heart, and a lingering memory.</p>
+  </div>
+  <div class="notes-pyramid reveal">
+    <div class="note-tier">
+      <div class="note-tier-label">Top Notes</div>
+      <div class="note-tier-name">The Opening</div>
+      <div class="note-items">
+        Bergamot<br>Lemon Zest<br>Green Cardamom<br>Pink Pepper
+      </div>
+    </div>
+    <div class="note-divider"></div>
+    <div class="note-tier">
+      <div class="note-tier-label">Heart Notes</div>
+      <div class="note-tier-name">The Soul</div>
+      <div class="note-items">
+        Bulgarian Rose<br>Jasmine Sambac<br>Violet Leaf<br>Iris Root
+      </div>
+    </div>
+    <div class="note-divider"></div>
+    <div class="note-tier">
+      <div class="note-tier-label">Base Notes</div>
+      <div class="note-tier-name">The Memory</div>
+      <div class="note-items">
+        Oud Wood<br>Amber Resin<br>White Musk<br>Sandalwood
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials">
+  <div class="reveal">
+    <div class="section-label">Client Stories</div>
+    <h2 class="section-title">Worn & <em>Loved</em></h2>
+  </div>
+  <div class="test-grid reveal">
+    <div class="test-card">
+      <div class="test-stars">★★★★★</div>
+      <p class="test-text">"Ambre Noir stopped three strangers on the street. I've never experienced a fragrance with such presence. It's become my signature."</p>
+      <div class="test-name">Isabelle M. — Paris</div>
+    </div>
+    <div class="test-card">
+      <div class="test-stars">★★★★★</div>
+      <p class="test-text">"Brume Marine transports me to the Amalfi coast every single morning. The longevity is extraordinary — still present 14 hours later."</p>
+      <div class="test-name">James K. — London</div>
+    </div>
+    <div class="test-card">
+      <div class="test-stars">★★★★★</div>
+      <p class="test-text">"Rose Absolue is not just a perfume — it's an emotion. My grandmother asked what I was wearing. I gifted her a bottle the next day."</p>
+      <div class="test-name">Sofia R. — Milan</div>
+    </div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<section class="newsletter">
+  <div class="reveal">
+    <div class="section-label" style="justify-content:center">Stay in the Know</div>
+    <h2 class="newsletter-title">The Inner <em>Circle</em></h2>
+    <p class="newsletter-sub">Early access to new collections. Private events. Stories from our atelier.</p>
+    <div class="newsletter-form">
+      <input type="email" class="newsletter-input" placeholder="Your email address">
+      <button class="newsletter-btn">Join</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div>
+      <div class="footer-brand">SCENT <span>BY MIMI</span></div>
+      <p class="footer-tagline">Rare fragrances for those<br>who live with intention.</p>
+    </div>
+    <div>
+      <div class="footer-col-title">Collections</div>
+      <ul class="footer-links">
+        <li><a href="#">Ambre Noir</a></li>
+        <li><a href="#">Brume Marine</a></li>
+        <li><a href="#">Rose Absolue</a></li>
+        <li><a href="#">Gift Sets</a></li>
+        <li><a href="#">Discovery Kit</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Journal</div>
+      <ul class="footer-links">
+        <li><a href="#">Our Story</a></li>
+        <li><a href="#">The Atelier</a></li>
+        <li><a href="#">Ingredient Guide</a></li>
+        <li><a href="#">Press</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Support</div>
+      <ul class="footer-links">
+        <li><a href="#">Shipping & Returns</a></li>
+        <li><a href="#">FAQ</a></li>
+        <li><a href="#">Contact</a></li>
+        <li><a href="#">Fragrance Finder</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 Scent by Mimi. All rights reserved.</div>
+    <div class="footer-socials">
+      <a href="#">Instagram</a>
+      <a href="#">Pinterest</a>
+      <a href="#">TikTok</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+    ring.style.left = e.clientX + 'px';
+    ring.style.top = e.clientY + 'px';
+  });
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      ring.style.width = '52px';
+      ring.style.height = '52px';
+      ring.style.opacity = '0.6';
+    });
+    el.addEventListener('mouseleave', () => {
+      ring.style.width = '32px';
+      ring.style.height = '32px';
+      ring.style.opacity = '1';
+    });
+  });
+
+  // Navbar scroll
+  const navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 60);
+  });
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.12 });
+  reveals.forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
