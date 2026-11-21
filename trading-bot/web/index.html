@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forex AI Bot</title>
+<style>
+:root{--bg:#0e1116;--card:#171b22;--line:#262c36;--tx:#e6e9ef;--mut:#8b93a1;--up:#22c55e;--dn:#ef4444;--ac:#6ea8fe}
+@media (prefers-color-scheme:light){:root{--bg:#f5f6f8;--card:#fff;--line:#e2e5ea;--tx:#161a20;--mut:#667085;--up:#16a34a;--dn:#dc2626;--ac:#2563eb}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+h1{font-size:17px;margin:0 auto 0 0}.pill{padding:3px 10px;border-radius:99px;border:1px solid var(--line);font-size:12px;color:var(--mut)}
+.pill.warn{color:#f59e0b;border-color:#f59e0b}.pill.live{color:var(--dn);border-color:var(--dn)}
+main{display:grid;gap:14px;padding:16px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));max-width:1200px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card h2{font-size:13px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.wide{grid-column:1/-1}table{width:100%;border-collapse:collapse}td,th{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{color:var(--mut);font-weight:500;font-size:12px}tr.sel{background:rgba(110,168,254,.1)}tr[data-p]{cursor:pointer}
+.BUY{color:var(--up);font-weight:600}.SELL{color:var(--dn);font-weight:600}.NONE{color:var(--mut)}
+button{background:var(--ac);color:#fff;border:0;border-radius:7px;padding:7px 12px;font:inherit;cursor:pointer}
+button.sec{background:transparent;color:var(--tx);border:1px solid var(--line)}button:disabled{opacity:.5}
+input{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:7px;padding:7px 10px;font:inherit;width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap}.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.kpi div{border:1px solid var(--line);border-radius:8px;padding:8px}.kpi b{display:block;font-size:18px}.kpi span{color:var(--mut);font-size:12px}
+ul{margin:6px 0;padding-left:18px}.log{font:12px ui-monospace,monospace;color:var(--mut);max-height:180px;overflow:auto;white-space:pre-wrap}
+canvas{width:100%;height:140px}.note{color:var(--mut);font-size:12px}.up{color:var(--up)}.dn{color:var(--dn)}
+</style></head><body>
+<header><h1>Forex AI Bot</h1><span id="mode" class="pill">…</span><span id="src" class="pill">…</span><span id="aiflag" class="pill">…</span>
+<button id="autoBtn" class="sec">Auto: off</button></header>
+<main>
+<div class="card wide"><h2>Account</h2><div class="kpi" id="acct"></div></div>
+<div class="card wide"><h2>Signals <span class="note" id="tf"></span></h2>
+<table><thead><tr><th>Pair</th><th>Signal</th><th>Score</th><th>Regime</th><th>Entry</th><th>Stop</th><th>Target</th><th>R:R</th></tr></thead><tbody id="sigs"><tr><td colspan="8">loading…</td></tr></tbody></table>
+<p class="note">Select a pair, then run AI analysis or a backtest.</p></div>
+<div class="card"><h2>AI analysis — <span id="selA">pick a pair</span></h2>
+<div class="row"><input id="q" placeholder="Optional question, e.g. 'is this a good time to enter?'"><button id="askBtn">Analyze</button></div>
+<div id="ai" class="note" style="margin-top:10px"></div></div>
+<div class="card"><h2>Backtest — <span id="selB">pick a pair</span></h2>
+<div class="row"><button id="btBtn">Run backtest</button><button id="wfBtn" class="sec">+ Walk-forward</button></div>
+<div id="bt" style="margin-top:10px"></div><canvas id="cv"></canvas></div>
+<div class="card wide"><h2>Open &amp; closed trades</h2><table><thead><tr><th>Pair</th><th>Side</th><th>Units</th><th>Entry</th><th>P&amp;L</th></tr></thead><tbody id="trades"></tbody></table></div>
+<div class="card wide"><h2>Bot log</h2><div class="log" id="log"></div></div>
+</main>
+<script>
+let sel=null,SIG={};const $=id=>document.getElementById(id);
+const tk=()=>{try{return localStorage.getItem('tok')||''}catch(e){return ''}};
+const j=async(u,o={})=>{o.headers={...(o.headers||{}),'X-API-Key':tk()};let r=await fetch(u,o);if(r.status===401){const t=prompt('API token');if(t){try{localStorage.setItem('tok',t)}catch(e){}o.headers['X-API-Key']=t;r=await fetch(u,o)}}const d=await r.json();if(!r.ok)throw new Error(d.detail||r.statusText);return d};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const f=(v,p)=>v==null?'':(+v).toFixed(p);
+async function status(){const s=await j('/api/status');
+ $('mode').textContent=s.mode;$('mode').className='pill '+(s.mode==='LIVE'?'live':'');
+ $('src').textContent='data: '+s.data_source;$('src').className='pill '+(s.data_source!=='oanda'?'warn':'');
+ $('aiflag').textContent=s.ai_enabled?'AI on':'AI off';$('tf').textContent='· '+s.timeframe+' · min score '+s.min_score;
+ $('autoBtn').textContent='Auto: '+(s.auto?'on':'off');$('autoBtn').dataset.on=s.auto;
+ const a=s.account,pl=a.equity-(a.balance??a.equity);
+ $('acct').innerHTML=`<div><b>${f(a.equity,2)}</b><span>Equity</span></div><div><b>${f(a.balance??a.equity,2)}</b><span>Balance</span></div><div><b class="${pl>=0?'up':'dn'}">${f(pl,2)}</b><span>Open P&L</span></div><div><b>${a.open.length}</b><span>Open trades</span></div>`;
+ const rows=[...a.open.map(t=>({...t,o:1})),...a.closed.slice().reverse()];
+ $('trades').innerHTML=rows.map(t=>`<tr><td>${esc(t.pair)}</td><td class="${esc(t.side)}">${esc(t.side||'')}${t.o?' (open)':''}</td><td>${esc(t.units)}</td><td>${esc(t.entry)}</td><td class="${(t.pnl||0)>=0?'up':'dn'}">${t.pnl!=null?f(t.pnl,2):''}</td></tr>`).join('')||'<tr><td colspan=5 class="note">No trades yet</td></tr>';
+ $('log').textContent=s.log.join('\n')||'—';}
+async function signals(){const d=await j('/api/signals');
+ $('sigs').innerHTML=d.signals.map(s=>{SIG[s.pair]=s;const dp=s.pair.endsWith('JPY')||s.pair.startsWith('XAU')?3:5;
+ return `<tr data-p="${esc(s.pair)}" class="${s.pair===sel?'sel':''}"><td>${esc(s.pair.replace('_','/'))}</td><td class="${s.side}">${s.side}</td><td>${s.score}</td><td>${esc(s.regime)}</td><td>${f(s.entry,dp)}</td><td>${s.side==='NONE'?'':f(s.stop,dp)}</td><td>${s.side==='NONE'?'':f(s.target,dp)}</td><td>${s.side==='NONE'?'':s.rr}</td></tr>`}).join('');
+ document.querySelectorAll('tr[data-p]').forEach(r=>r.onclick=()=>{sel=r.dataset.p;$('selA').textContent=$('selB').textContent=sel.replace('_','/');
+  document.querySelectorAll('tr[data-p]').forEach(x=>x.classList.toggle('sel',x===r))});}
+$('askBtn').onclick=async()=>{if(!sel)return;$('ai').textContent='Thinking…';
+ try{const d=await j('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pair:sel,question:$('q').value||null})});
+ const a=d.ai,s=d.signal;$('ai').innerHTML=`<b>${esc(a.verdict)}</b> · confidence ${esc(a.confidence)}%<p>${esc(a.summary)}</p><p><b>Key risk:</b> ${esc(a.key_risk)}<br><b>Invalidation:</b> ${esc(a.invalidation)}</p><b>Rule-based reasons (${esc(s.side)}, ${s.score}):</b><ul>${s.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`}catch(e){$('ai').textContent=e.message}};
+async function bt(walk){if(!sel)return;$('bt').textContent='Running…';
+ try{const d=await j('/api/backtest/'+sel+(walk?'?walk=true':''));const r=d.result;
+ if(!r.trades){$('bt').textContent='No trades generated.';return}
+ $('bt').innerHTML=`<div class="kpi"><div><b>${r.trades}</b><span>Trades</span></div><div><b>${r.win_rate}%</b><span>Win rate</span></div><div><b>${r.profit_factor}</b><span>Profit factor</span></div><div><b>${r.expectancy_R}R</b><span>Expectancy</span></div><div><b class="${r.net_return_pct>=0?'up':'dn'}">${r.net_return_pct}%</b><span>Return</span></div><div><b class="dn">${r.max_drawdown_pct}%</b><span>Max drawdown</span></div></div>`
+ +(d.data_source!=='oanda'?'<p class="note">⚠ Synthetic demo data — results mean nothing. Connect OANDA for real backtests.</p>':'')
+ +(d.walk_forward?`<p class="note">Walk-forward folds (return %): ${d.walk_forward.map(w=>w.net_return_pct??'n/a').join(' · ')} — an edge that exists in only one fold is likely luck.</p>`:'');
+ draw(r.equity_curve)}catch(e){$('bt').textContent=e.message}}
+$('btBtn').onclick=()=>bt(false);$('wfBtn').onclick=()=>bt(true);
+function draw(c){const cv=$('cv'),x=cv.getContext('2d');cv.width=cv.clientWidth*2;cv.height=280;x.clearRect(0,0,cv.width,280);
+ const mn=Math.min(...c),mx=Math.max(...c),st=getComputedStyle(document.body);x.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--ac');x.lineWidth=3;x.beginPath();
+ c.forEach((v,i)=>{const X=i/(c.length-1)*cv.width,Y=270-(v-mn)/((mx-mn)||1)*250;i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()}
+$('autoBtn').onclick=async()=>{try{await j('/api/auto/'+($('autoBtn').dataset.on==='true'?'stop':'start'),{method:'POST'})}catch(e){alert(e.message)}status()};
+status();signals();setInterval(status,10000);setInterval(signals,60000);
+</script></body></html>
