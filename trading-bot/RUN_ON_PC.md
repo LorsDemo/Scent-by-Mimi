@@ -11,7 +11,7 @@ copy .env.example .env        (Mac/Linux: cp .env.example .env)
 Open `.env` in a text editor and set:
 - `API_TOKEN=` a long random string (e.g. 30+ random characters). The app needs the same value.
 - `TWELVEDATA_API_KEY` from a free account at https://twelvedata.com (market data, no broker needed).
-  OANDA is optional and only needed for real order execution.
+  OANDA is optional (an alternative data source).
 - AI is optional. To enable it set `AI_PROVIDER` (`anthropic`, `openai`, `gemini`, `ollama` = free local, or `none`) and `AI_API_KEY`.
 
 ## 2. Start the server
