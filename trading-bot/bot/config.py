@@ -1,5 +1,21 @@
 import os
+import pathlib
 from dataclasses import dataclass, field
+
+
+def _load_dotenv():
+    """Load trading-bot/.env without extra dependencies (works on Windows too)."""
+    f = pathlib.Path(__file__).resolve().parent.parent / ".env"
+    if not f.exists():
+        return
+    for line in f.read_text(encoding="utf-8").splitlines():
+        line = line.split(" #")[0].strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
+_load_dotenv()
 
 
 def _f(name, default):

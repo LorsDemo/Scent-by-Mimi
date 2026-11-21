@@ -7,7 +7,7 @@ with a web dashboard.
 ```bash
 cd trading-bot
 pip install -r requirements.txt
-cp .env.example .env && set -a && source .env && set +a   # fill in keys
+cp .env.example .env     # then edit .env and fill in keys (loaded automatically)
 python run.py            # open http://127.0.0.1:8000
 pytest                   # run tests
 ```
