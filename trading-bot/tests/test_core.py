@@ -62,3 +62,31 @@ def test_api_token_enforced(monkeypatch):
     assert c.get("/api/status", headers={"X-API-Key": "wrong"}).status_code == 401
     assert c.get("/api/status", headers={"X-API-Key": "s3cret"}).status_code == 200
     assert c.get("/").status_code == 200        # dashboard shell loads without token
+
+
+def test_ai_provider_selection_and_openai_compat(monkeypatch):
+    from bot import ai
+    assert not Config(ai_provider="none", ai_key="k").ai_enabled
+    assert not Config(ai_provider="openai", ai_key="").ai_enabled
+    assert Config(ai_provider="ollama", ai_key="").ai_enabled          # local: no key
+    assert Config(ai_provider="gemini", ai_key="k").ai_enabled
+
+    seen = {}
+
+    class R:
+        def raise_for_status(self): pass
+        def json(self): return {"choices": [{"message": {"content": '{"verdict":"TAKE","confidence":70,"summary":"s","key_risk":"r","invalidation":"i"}'}}]}
+
+    import requests
+    def fake_post(url, headers=None, json=None, timeout=None):
+        seen.update(url=url, model=json["model"], auth=headers["Authorization"]); return R()
+    monkeypatch.setattr(requests, "post", fake_post)
+    df = synthetic(n=400)
+    sig = build_signal("EUR_USD", df, resample(df, "4h"))
+    out = ai.analyze(Config(ai_provider="gemini", ai_key="K"), sig, df)
+    assert out["verdict"] == "TAKE"
+    assert seen["url"].endswith("/openai/chat/completions") and seen["auth"] == "Bearer K"
+    assert ai.analyze(Config(ai_provider="none"), sig, df)["verdict"] == "N/A"
+    import pytest
+    with pytest.raises(ValueError):
+        ai.complete(Config(ai_provider="bogus", ai_key="k"), "s", "p")

@@ -56,7 +56,7 @@ class Engine:
             if not ok:
                 self.note(f"{p} {sig.side} skipped: {why}")
                 continue
-            if self.cfg.anthropic_key:
+            if ai.enabled(self.cfg):
                 v = ai.analyze(self.cfg, sig, df)
                 if v.get("verdict") == "SKIP":
                     self.note(f"{p} {sig.side} vetoed by AI: {v.get('summary','')[:90]}")

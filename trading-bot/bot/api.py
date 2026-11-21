@@ -38,7 +38,7 @@ def index():
 @app.get("/api/status", dependencies=AUTH)
 def status():
     return {"mode": "LIVE" if cfg.live_enabled else "PAPER", "data_source": eng.data_source,
-            "ai_enabled": bool(cfg.anthropic_key), "auto": eng.auto, "pairs": cfg.pairs,
+            "ai_enabled": cfg.ai_enabled, "auto": eng.auto, "pairs": cfg.pairs,
             "timeframe": cfg.timeframe, "min_score": cfg.min_score,
             "account": eng.broker.state(), "log": eng.log[-30:]}
 
