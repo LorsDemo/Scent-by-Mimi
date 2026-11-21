@@ -2,7 +2,7 @@ import numpy as np
 from bot.data import synthetic, resample
 from bot.indicators import add_all, rsi
 from bot.signals import build_signal
-from bot.risk import units_for_risk, RiskManager
+from bot.risk import units_for_risk
 from bot.config import Config
 from bot import backtest as bt
 
@@ -30,21 +30,6 @@ def test_position_sizing_risks_target_fraction():
     assert abs(u * 0.0050 - 100) < 1
 
 
-def test_daily_loss_halt():
-    cfg = Config()
-    rm = RiskManager(cfg)
-    assert rm.can_trade(10000, [], "EUR_USD", "d1")[0]
-    ok, why = rm.can_trade(9700, [], "EUR_USD", "d1")
-    assert not ok and "daily loss" in why
-
-
-def test_live_requires_explicit_confirmation():
-    c = Config(mode="live", oanda_key="k", oanda_account="a", live_confirm="")
-    assert not c.live_enabled
-    c.live_confirm = "I-ACCEPT-THE-RISK"
-    assert c.live_enabled
-
-
 def test_backtest_runs_and_no_lookahead_equity_consistent():
     df = synthetic(n=3000, seed=5)
     r = bt.run("EUR_USD", df)
@@ -58,9 +43,9 @@ def test_api_token_enforced(monkeypatch):
     import bot.api as api
     monkeypatch.setattr(api, "API_TOKEN", "s3cret")
     c = TestClient(api.app)
-    assert c.get("/api/status").status_code == 401
-    assert c.get("/api/status", headers={"X-API-Key": "wrong"}).status_code == 401
-    assert c.get("/api/status", headers={"X-API-Key": "s3cret"}).status_code == 200
+    assert c.get("/api/record").status_code == 401
+    assert c.get("/api/record", headers={"X-API-Key": "wrong"}).status_code == 401
+    assert c.get("/api/record", headers={"X-API-Key": "s3cret"}).status_code == 200
     assert c.get("/").status_code == 200        # dashboard shell loads without token
 
 
@@ -123,3 +108,27 @@ def test_twelvedata_source_parsing_cache_and_selection(monkeypatch):
     assert isinstance(make_source(Config(twelve_key="k", data_provider="auto")), TwelveData)
     assert isinstance(make_source(Config(oanda_key="a", oanda_account="b", twelve_key="k")), OandaData)
     assert make_source(Config(twelve_key="", oanda_key="", data_provider="auto")) is None
+
+
+def test_tracker_records_once_and_grades_outcomes(tmp_path):
+    import pandas as pd
+    from bot.tracker import Tracker
+    from bot.signals import Signal
+    t = Tracker(tmp_path / "log.json")
+    idx = pd.date_range("2025-01-01", periods=6, freq="60min", tz="UTC")
+    sig = Signal("EUR_USD", "BUY", 3.5, 1.1000, 1.0950, 1.1100, 0.0033, "trend", ["x"], str(idx[0]))
+    item, new = t.record(sig)
+    assert new and not t.record(sig)[1]                       # no duplicates
+    df = pd.DataFrame({"open": 1.1, "high": 1.101, "low": 1.099, "close": 1.1, "volume": 0}, index=idx)
+    t.resolve("EUR_USD", df)
+    assert t.items[0]["status"] == "open"                      # neither level touched
+    df.loc[idx[3], "high"] = 1.1105                            # target reached
+    t.resolve("EUR_USD", df)
+    assert t.items[0]["status"] == "win" and t.summary()["total_R"] == 2.0
+    sell = Signal("GBP_USD", "SELL", -3.5, 1.3, 1.31, 1.28, 0.006, "trend", [], str(idx[0]))
+    t.record(sell)
+    df2 = pd.DataFrame({"open": 1.3, "high": 1.301, "low": 1.299, "close": 1.3, "volume": 0}, index=idx)
+    df2.loc[idx[2], ["high", "low"]] = [1.32, 1.27]            # both levels in one bar -> loss
+    t.resolve("GBP_USD", df2)
+    assert t.items[1]["status"] == "loss"
+    assert t.summary()["win_rate"] == 50.0

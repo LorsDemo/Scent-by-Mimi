@@ -22,10 +22,9 @@ input{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-r
 ul{margin:6px 0;padding-left:18px}.log{font:12px ui-monospace,monospace;color:var(--mut);max-height:180px;overflow:auto;white-space:pre-wrap}
 canvas{width:100%;height:140px}.note{color:var(--mut);font-size:12px}.up{color:var(--up)}.dn{color:var(--dn)}
 </style></head><body>
-<header><h1>Forex AI Bot</h1><span id="mode" class="pill">…</span><span id="src" class="pill">…</span><span id="aiflag" class="pill">…</span>
-<button id="autoBtn" class="sec">Auto: off</button></header>
+<header><h1>Forex AI Signals</h1><span id="mode" class="pill">…</span><span id="src" class="pill">…</span><span id="aiflag" class="pill">…</span></header>
 <main>
-<div class="card wide"><h2>Account</h2><div class="kpi" id="acct"></div></div>
+<div class="card wide"><h2>Track record <span class="note">· how past signals turned out</span></h2><div class="kpi" id="acct"></div><p class="note" id="recnote"></p></div>
 <div class="card wide"><h2>Signals <span class="note" id="tf"></span></h2>
 <table><thead><tr><th>Pair</th><th>Signal</th><th>Score</th><th>Regime</th><th>Entry</th><th>Stop</th><th>Target</th><th>R:R</th></tr></thead><tbody id="sigs"><tr><td colspan="8">loading…</td></tr></tbody></table>
 <p class="note">Select a pair, then run AI analysis or a backtest.</p></div>
@@ -35,8 +34,8 @@ canvas{width:100%;height:140px}.note{color:var(--mut);font-size:12px}.up{color:v
 <div class="card"><h2>Backtest — <span id="selB">pick a pair</span></h2>
 <div class="row"><button id="btBtn">Run backtest</button><button id="wfBtn" class="sec">+ Walk-forward</button></div>
 <div id="bt" style="margin-top:10px"></div><canvas id="cv"></canvas></div>
-<div class="card wide"><h2>Open &amp; closed trades</h2><table><thead><tr><th>Pair</th><th>Side</th><th>Units</th><th>Entry</th><th>P&amp;L</th></tr></thead><tbody id="trades"></tbody></table></div>
-<div class="card wide"><h2>Bot log</h2><div class="log" id="log"></div></div>
+<div class="card wide"><h2>Signal history</h2><table><thead><tr><th>Pair</th><th>Side</th><th>Entry</th><th>Stop</th><th>Target</th><th>Result</th><th>AI</th></tr></thead><tbody id="trades"></tbody></table></div>
+<div class="card wide"><h2>Activity</h2><div class="log" id="log"></div></div>
 </main>
 <script>
 let sel=null,SIG={};const $=id=>document.getElementById(id);
@@ -45,15 +44,14 @@ const j=async(u,o={})=>{o.headers={...(o.headers||{}),'X-API-Key':tk()};let r=aw
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const f=(v,p)=>v==null?'':(+v).toFixed(p);
 async function status(){const s=await j('/api/status');
- $('mode').textContent=s.mode;$('mode').className='pill '+(s.mode==='LIVE'?'live':'');
+ $('mode').textContent='SIGNALS ONLY';
  $('src').textContent='data: '+s.data_source;$('src').className='pill '+(s.data_source.startsWith('synthetic')?'warn':'');
  $('aiflag').textContent=s.ai_enabled?'AI on':'AI off';$('tf').textContent='· '+s.timeframe+' · min score '+s.min_score;
- $('autoBtn').textContent='Auto: '+(s.auto?'on':'off');$('autoBtn').dataset.on=s.auto;
- const a=s.account,pl=a.equity-(a.balance??a.equity);
- $('acct').innerHTML=`<div><b>${f(a.equity,2)}</b><span>Equity</span></div><div><b>${f(a.balance??a.equity,2)}</b><span>Balance</span></div><div><b class="${pl>=0?'up':'dn'}">${f(pl,2)}</b><span>Open P&L</span></div><div><b>${a.open.length}</b><span>Open trades</span></div>`;
- const rows=[...a.open.map(t=>({...t,o:1})),...a.closed.slice().reverse()];
- $('trades').innerHTML=rows.map(t=>`<tr><td>${esc(t.pair)}</td><td class="${esc(t.side)}">${esc(t.side||'')}${t.o?' (open)':''}</td><td>${esc(t.units)}</td><td>${esc(t.entry)}</td><td class="${(t.pnl||0)>=0?'up':'dn'}">${t.pnl!=null?f(t.pnl,2):''}</td></tr>`).join('')||'<tr><td colspan=5 class="note">No trades yet</td></tr>';
- $('log').textContent=s.log.join('\n')||'—';}
+ $('log').textContent=s.log.join('\n')||'—';
+ const r=await j('/api/record'),m=r.summary;
+ $('acct').innerHTML=`<div><b>${m.total}</b><span>Signals given</span></div><div><b>${m.open}</b><span>Still open</span></div><div><b>${m.win_rate==null?'–':m.win_rate+'%'}</b><span>Win rate (${m.closed} closed)</span></div><div><b class="${m.total_R>=0?'up':'dn'}">${m.total_R}R</b><span>Total result</span></div>`;
+ $('recnote').textContent=m.closed<30?'Too few closed signals to judge yet. Aim for 30+ before trusting the numbers. R = multiples of the risk on each signal.':'';
+ $('trades').innerHTML=r.signals.map(t=>`<tr><td>${esc(t.pair)}</td><td class="${esc(t.side)}">${esc(t.side)}</td><td>${esc(t.entry)}</td><td>${f(t.stop,5)}</td><td>${f(t.target,5)}</td><td class="${t.status==='win'?'up':t.status==='loss'?'dn':''}">${esc(t.status)}</td><td>${t.ai?esc(t.ai.verdict):''}</td></tr>`).join('')||'<tr><td colspan=7 class="note">No signals yet. They appear here as the bot finds setups.</td></tr>';}
 async function signals(){const d=await j('/api/signals');
  $('sigs').innerHTML=d.signals.map(s=>{SIG[s.pair]=s;const dp=s.pair.endsWith('JPY')||s.pair.startsWith('XAU')?3:5;
  return `<tr data-p="${esc(s.pair)}" class="${s.pair===sel?'sel':''}"><td>${esc(s.pair.replace('_','/'))}</td><td class="${s.side}">${s.side}</td><td>${s.score}</td><td>${esc(s.regime)}</td><td>${f(s.entry,dp)}</td><td>${s.side==='NONE'?'':f(s.stop,dp)}</td><td>${s.side==='NONE'?'':f(s.target,dp)}</td><td>${s.side==='NONE'?'':s.rr}</td></tr>`}).join('');
@@ -73,6 +71,5 @@ $('btBtn').onclick=()=>bt(false);$('wfBtn').onclick=()=>bt(true);
 function draw(c){const cv=$('cv'),x=cv.getContext('2d');cv.width=cv.clientWidth*2;cv.height=280;x.clearRect(0,0,cv.width,280);
  const mn=Math.min(...c),mx=Math.max(...c),st=getComputedStyle(document.body);x.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--ac');x.lineWidth=3;x.beginPath();
  c.forEach((v,i)=>{const X=i/(c.length-1)*cv.width,Y=270-(v-mn)/((mx-mn)||1)*250;i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()}
-$('autoBtn').onclick=async()=>{try{await j('/api/auto/'+($('autoBtn').dataset.on==='true'?'stop':'start'),{method:'POST'})}catch(e){alert(e.message)}status()};
-status();signals();setInterval(status,10000);setInterval(signals,60000);
+status();signals();setInterval(status,30000);setInterval(signals,60000);
 </script></body></html>

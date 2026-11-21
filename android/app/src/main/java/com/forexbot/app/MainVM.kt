@@ -18,12 +18,14 @@ data class Sig(
     val reasons: List<String>,
 )
 
-data class Trade(val pair: String, val side: String, val units: String, val entry: Double, val pnl: Double?, val open: Boolean)
-
-data class Account(
-    val mode: String, val dataSource: String, val aiEnabled: Boolean, val auto: Boolean,
-    val equity: Double, val balance: Double, val trades: List<Trade>, val log: List<String>,
+data class Rec(
+    val pair: String, val side: String, val entry: Double, val stop: Double, val target: Double,
+    val status: String, val verdict: String?, val aiSummary: String?,
 )
+
+data class Summary(val total: Int, val open: Int, val closed: Int, val winRate: Double?, val totalR: Double)
+
+data class Info(val dataSource: String, val aiEnabled: Boolean)
 
 private fun JSONArray?.strings(): List<String> = if (this == null) emptyList() else (0 until length()).map { getString(it) }
 
@@ -33,10 +35,13 @@ fun JSONObject.toSig() = Sig(
     optJSONArray("reasons").strings(),
 )
 
-private fun JSONObject.toTrade(open: Boolean) = Trade(
-    optString("pair"), optString("side"), optString("units"), optDouble("entry", 0.0),
-    if (has("pnl")) optDouble("pnl") else null, open,
-)
+private fun JSONObject.toRec(): Rec {
+    val ai = optJSONObject("ai")
+    return Rec(
+        getString("pair"), getString("side"), getDouble("entry"), getDouble("stop"), getDouble("target"),
+        optString("status"), ai?.optString("verdict"), ai?.optString("summary"),
+    )
+}
 
 class MainVM(app: Application) : AndroidViewModel(app) {
     var url by mutableStateOf(Prefs.url(app))
@@ -44,7 +49,9 @@ class MainVM(app: Application) : AndroidViewModel(app) {
     var notify by mutableStateOf(Prefs.notify(app))
 
     var signals by mutableStateOf(listOf<Sig>())
-    var account by mutableStateOf<Account?>(null)
+    var info by mutableStateOf<Info?>(null)
+    var summary by mutableStateOf<Summary?>(null)
+    var history by mutableStateOf(listOf<Rec>())
     var selected by mutableStateOf<String?>(null)
     var aiText by mutableStateOf<String?>(null)
     var btText by mutableStateOf<String?>(null)
@@ -69,19 +76,18 @@ class MainVM(app: Application) : AndroidViewModel(app) {
 
     fun refresh() = launchIo({
         val a = api()
-        Pair(a.get("/api/status"), a.get("/api/signals"))
-    }) { (s, g) ->
-        val acct = s.getJSONObject("account")
-        val trades = mutableListOf<Trade>()
-        acct.optJSONArray("open")?.let { for (i in 0 until it.length()) trades += it.getJSONObject(i).toTrade(true) }
-        acct.optJSONArray("closed")?.let { for (i in it.length() - 1 downTo 0) trades += it.getJSONObject(i).toTrade(false) }
-        val eq = acct.optDouble("equity", 0.0)
-        account = Account(
-            s.getString("mode"), s.getString("data_source"), s.getBoolean("ai_enabled"), s.getBoolean("auto"),
-            eq, acct.optDouble("balance", eq), trades, s.optJSONArray("log").strings().reversed(),
-        )
+        Triple(a.get("/api/status"), a.get("/api/signals"), a.get("/api/record"))
+    }) { (st, g, r) ->
+        info = Info(st.getString("data_source"), st.getBoolean("ai_enabled"))
         val arr = g.getJSONArray("signals")
         signals = (0 until arr.length()).map { arr.getJSONObject(it).toSig() }
+        val m = r.getJSONObject("summary")
+        summary = Summary(
+            m.getInt("total"), m.getInt("open"), m.getInt("closed"),
+            if (m.isNull("win_rate")) null else m.getDouble("win_rate"), m.getDouble("total_R"),
+        )
+        val h = r.getJSONArray("signals")
+        history = (0 until h.length()).map { h.getJSONObject(it).toRec() }
     }
 
     fun select(pair: String?) {
@@ -118,10 +124,6 @@ class MainVM(app: Application) : AndroidViewModel(app) {
         if (d.optString("data_source").startsWith("synthetic")) sb.append("\n\nSYNTHETIC DEMO DATA: results are meaningless.")
         btText = sb.toString()
     }
-
-    fun setAuto(on: Boolean) = launchIo({
-        api().post("/api/auto/" + if (on) "start" else "stop")
-    }) { refresh() }
 
     fun saveSettings() {
         val app = getApplication<Application>()

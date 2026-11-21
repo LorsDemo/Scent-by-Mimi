@@ -83,17 +83,16 @@ fun App(vm: MainVM) {
     Scaffold(
         topBar = {
             TopAppBar(title = {
-                val a = vm.account
-                Text("Forex AI Bot" + if (a != null) "  ·  ${a.mode}" else "")
+                Text("Forex AI Signals")
             })
         },
         bottomBar = {
             NavigationBar {
-                listOf("Signals", "Account", "Settings").forEachIndexed { i, label ->
+                listOf("Signals", "Record", "Settings").forEachIndexed { i, label ->
                     NavigationBarItem(
                         selected = tab == i,
                         onClick = { tab = i; vm.select(null) },
-                        icon = { Text(listOf("📈", "💼", "⚙️")[i]) },
+                        icon = { Text(listOf("📈", "📋", "⚙️")[i]) },
                         label = { Text(label) },
                     )
                 }
@@ -107,7 +106,7 @@ fun App(vm: MainVM) {
             when {
                 tab == 0 && sel != null -> Detail(vm, vm.signals.firstOrNull { it.pair == sel })
                 tab == 0 -> Signals(vm)
-                tab == 1 -> AccountTab(vm)
+                tab == 1 -> RecordTab(vm)
                 else -> SettingsTab(vm)
             }
         }
@@ -116,7 +115,7 @@ fun App(vm: MainVM) {
 
 @Composable
 fun Signals(vm: MainVM) {
-    if (vm.account?.dataSource?.startsWith("synthetic") == true)
+    if (vm.info?.dataSource?.startsWith("synthetic") == true)
         Text("Server is on synthetic DEMO data. Signals are not real.", color = Color(0xFFF59E0B))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         OutlinedButton(onClick = { vm.refresh() }) { Text("Refresh") }
@@ -163,36 +162,38 @@ fun Detail(vm: MainVM, s: Sig?) {
 }
 
 @Composable
-fun AccountTab(vm: MainVM) {
-    val a = vm.account
-    if (a == null) { Text("No data yet. Set the server in Settings."); return }
+fun RecordTab(vm: MainVM) {
+    val m = vm.summary
+    if (m == null) { Text("No data yet. Set the server in Settings."); return }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Equity ${"%.2f".format(a.equity)}", style = MaterialTheme.typography.titleLarge)
-                    Text("Balance ${"%.2f".format(a.balance)}  ·  Data: ${a.dataSource}  ·  AI: ${if (a.aiEnabled) "on" else "off"}")
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Auto-trading (${a.mode})", Modifier.weight(1f))
-                        Switch(checked = a.auto, onCheckedChange = { vm.setAuto(it) })
-                    }
-                    if (a.mode == "LIVE") Text("LIVE: real money is at risk.", color = Red, fontWeight = FontWeight.Bold)
+                    Text("Track record", style = MaterialTheme.typography.titleMedium)
+                    Text("Signals given: ${m.total}  ·  open: ${m.open}  ·  closed: ${m.closed}")
+                    Text("Win rate: ${m.winRate?.let { "$it%" } ?: "–"}  ·  Total: ${m.totalR}R")
+                    if (m.closed < 30) Text(
+                        "Too few closed signals to judge. Wait for 30+ before trusting these numbers.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text("Data: ${vm.info?.dataSource}  ·  AI: ${if (vm.info?.aiEnabled == true) "on" else "off"}",
+                        style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
-        item { Text("Trades", fontWeight = FontWeight.SemiBold) }
-        if (a.trades.isEmpty()) item { Text("No trades yet", style = MaterialTheme.typography.bodySmall) }
-        items(a.trades) { t ->
-            val pnl = t.pnl
-            Text(
-                "${t.pair.replace('_', '/')} ${t.side}${if (t.open) " (open)" else ""} ×${t.units} @ ${t.entry}" +
-                    (if (pnl != null) "  P&L ${"%.2f".format(pnl)}" else ""),
-                color = if (pnl == null) MaterialTheme.colorScheme.onSurface else if (pnl >= 0) Green else Red,
-                style = MaterialTheme.typography.bodySmall,
-            )
+        if (vm.history.isEmpty()) item { Text("No signals yet. They appear here as the bot finds setups.", style = MaterialTheme.typography.bodySmall) }
+        items(vm.history) { r ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${r.pair.replace('_', '/')}  ${r.side}", color = sideColor(r.side), fontWeight = FontWeight.SemiBold)
+                        Text(r.status.uppercase(), color = when (r.status) { "win" -> Green; "loss" -> Red; else -> Color.Gray })
+                    }
+                    Text("Entry ${px(r.pair, r.entry)}  SL ${px(r.pair, r.stop)}  TP ${px(r.pair, r.target)}", style = MaterialTheme.typography.bodySmall)
+                    if (!r.verdict.isNullOrBlank()) Text("AI: ${r.verdict}  ${r.aiSummary ?: ""}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
-        item { Text("Bot log", fontWeight = FontWeight.SemiBold) }
-        items(a.log) { Text(it, style = MaterialTheme.typography.bodySmall) }
         item { OutlinedButton(onClick = { vm.refresh() }) { Text("Refresh") } }
     }
 }
@@ -212,7 +213,7 @@ fun SettingsTab(vm: MainVM) {
         }
         Button(onClick = { vm.saveSettings() }) { Text("Save & connect") }
         Text(
-            "The app only controls your server: your broker and AI keys never leave it. " +
+            "The app only shows signals from your server: your data and AI keys never leave it. You place trades yourself. " +
                 "Use HTTPS. Emulator: http://10.0.2.2:8000 works for local testing. " +
                 "Not financial advice; trading can lose money.",
             style = MaterialTheme.typography.bodySmall,

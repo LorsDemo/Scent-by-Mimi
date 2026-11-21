@@ -1,4 +1,4 @@
-# Run the bot on your PC + connect the Android app
+# Run the signals bot on your PC + connect the Android app
 
 Needs Python 3.10+ (https://www.python.org/downloads/). Keep the PC awake while the bot runs.
 
@@ -13,7 +13,6 @@ Open `.env` in a text editor and set:
 - `TWELVEDATA_API_KEY` from a free account at https://twelvedata.com (market data, no broker needed).
   OANDA is optional and only needed for real order execution.
 - AI is optional. To enable it set `AI_PROVIDER` (`anthropic`, `openai`, `gemini`, `ollama` = free local, or `none`) and `AI_API_KEY`.
-- Leave `BOT_MODE=paper`.
 
 ## 2. Start the server
 ```

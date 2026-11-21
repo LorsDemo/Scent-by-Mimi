@@ -24,14 +24,17 @@ class SignalWorker(private val ctx: Context, params: WorkerParameters) : Corouti
     override suspend fun doWork(): Result {
         if (!Prefs.notify(ctx) || Prefs.url(ctx).isBlank()) return Result.success()
         return try {
-            val arr = Api(Prefs.url(ctx), Prefs.token(ctx)).get("/api/signals").getJSONArray("signals")
+            val arr = Api(Prefs.url(ctx), Prefs.token(ctx)).get("/api/record").getJSONArray("signals")
             val seen = Prefs.seen(ctx).toMutableSet()
             for (i in 0 until arr.length()) {
                 val s = arr.getJSONObject(i)
-                val side = s.getString("side")
-                if (side == "NONE") continue
-                val key = "${s.getString("pair")}|$side|${s.optString("time")}"
-                if (seen.add(key)) notify(s.getString("pair"), side, s.getDouble("score"), s.getDouble("rr"))
+                if (s.optString("status") != "open") continue
+                if (!seen.add(s.getString("id"))) continue
+                val pair = s.getString("pair")
+                val dp = if (pair.endsWith("JPY") || pair.startsWith("XAU")) "%.3f" else "%.5f"
+                var text = "Entry ${dp.format(s.getDouble("entry"))}  SL ${dp.format(s.getDouble("stop"))}  TP ${dp.format(s.getDouble("target"))}"
+                s.optJSONObject("ai")?.let { text += "\nAI: ${it.optString("verdict")}. ${it.optString("summary")}" }
+                notify(pair, s.getString("side"), text)
             }
             Prefs.setSeen(ctx, seen.toList().takeLast(200).toSet())
             Result.success()
@@ -40,7 +43,7 @@ class SignalWorker(private val ctx: Context, params: WorkerParameters) : Corouti
         }
     }
 
-    private fun notify(pair: String, side: String, score: Double, rr: Double) {
+    private fun notify(pair: String, side: String, text: String) {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
@@ -48,7 +51,8 @@ class SignalWorker(private val ctx: Context, params: WorkerParameters) : Corouti
         val n = NotificationCompat.Builder(ctx, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("$side ${pair.replace('_', '/')}")
-            .setContentText("Score $score, R:R $rr. Open the app for details.")
+            .setContentText(text.lineSequence().first())
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(ctx).notify((pair + side).hashCode(), n)

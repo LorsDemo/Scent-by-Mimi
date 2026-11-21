@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from .config import Config
 from .engine import Engine
-from .data import get_frames, synthetic
+from .data import synthetic
 from . import backtest as bt
 
 cfg = Config()
@@ -35,17 +35,27 @@ def index():
     return FileResponse(WEB / "index.html")
 
 
+@app.on_event("startup")
+def _startup():
+    eng.start_watch()
+
+
 @app.get("/api/status", dependencies=AUTH)
 def status():
-    return {"mode": "LIVE" if cfg.live_enabled else "PAPER", "data_source": eng.data_source,
-            "ai_enabled": cfg.ai_enabled, "auto": eng.auto, "pairs": cfg.pairs,
-            "timeframe": cfg.timeframe, "min_score": cfg.min_score,
-            "account": eng.broker.state(), "log": eng.log[-30:]}
+    return {"data_source": eng.data_source, "ai_enabled": cfg.ai_enabled, "pairs": cfg.pairs,
+            "timeframe": cfg.timeframe, "min_score": cfg.min_score, "log": eng.log[-30:]}
 
 
 @app.get("/api/signals", dependencies=AUTH)
 def signals():
     return {"data_source": eng.data_source, "signals": eng.scan()}
+
+
+@app.get("/api/record", dependencies=AUTH)
+def record():
+    """Track record: every signal given so far and how it turned out."""
+    return {"summary": eng.tracker.summary(), "signals": eng.tracker.recent(50),
+            "data_source": eng.data_source}
 
 
 @app.post("/api/analyze", dependencies=AUTH)
@@ -65,16 +75,3 @@ def backtest(pair: str, walk: bool = False):
     if walk:
         out["walk_forward"] = bt.walk_forward(pair, df, **kw)
     return out
-
-
-@app.post("/api/auto/{action}", dependencies=AUTH)
-def auto(action: str):
-    if action == "start":
-        if not eng.src:
-            raise HTTPException(400, "Auto-trading needs real market data: set TWELVEDATA_API_KEY (free) or OANDA keys.")
-        eng.start()
-    elif action == "stop":
-        eng.stop()
-    else:
-        raise HTTPException(404)
-    return {"auto": eng.auto}

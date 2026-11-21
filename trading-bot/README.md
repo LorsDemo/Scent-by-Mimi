@@ -1,47 +1,43 @@
-# Forex AI Trading Bot
+# Forex AI Signals
 
-Signals, AI trade analysis, backtesting, paper trading and (optional) live execution on OANDA,
-with a web dashboard.
+An AI-assisted market analyst. It scans forex pairs, gives you **BUY/SELL signals with entry, stop and
+target**, explains them, and keeps an honest **track record** of how every past signal turned out.
+It never places trades. You decide and trade yourself.
 
 ## Quick start
+See `RUN_ON_PC.md` for step-by-step setup (Windows friendly).
 ```bash
 cd trading-bot
 pip install -r requirements.txt
-cp .env.example .env     # then edit .env and fill in keys (loaded automatically)
-python run.py            # open http://127.0.0.1:8000
-pytest                   # run tests
+cp .env.example .env     # then edit .env (keys are loaded automatically)
+python run.py            # dashboard: http://127.0.0.1:8000
+python -m pytest         # tests
 ```
-Without keys it runs on **synthetic demo data** (clearly flagged in the UI; auto-trading is blocked).
+Without keys it runs on **synthetic demo data** (clearly flagged).
 
 ## How it works
-| Layer | File | What it does |
+| Part | File | What it does |
 |---|---|---|
-| Data | `bot/data.py` | Pluggable candles (entry + higher timeframe): Twelve Data (free, no broker), OANDA, or synthetic demo |
-| Signals | `bot/signals.py` | Confluence scoring: trend (EMA stack, ADX/DI, MACD, pullbacks) vs range (Bollinger+RSI, stochastic) chosen by ADX regime, candle patterns, higher-timeframe filter, ATR stops, 1:2 R:R |
-| Risk | `bot/risk.py` | % risk position sizing, max open trades, daily loss halt |
-| Backtest | `bot/backtest.py` | Next-bar-open fills, spread cost, SL-first on ambiguous bars, no lookahead, walk-forward folds |
-| AI | `bot/ai.py` | Pluggable provider (Claude, OpenAI, Gemini, Ollama) gives a TAKE/SKIP/WATCH opinion, key risk and invalidation; can veto auto trades, never places orders |
-| Execution | `bot/broker.py` | `PaperBroker` (default) and `OandaBroker` (server-side SL/TP) |
-| App | `bot/api.py`, `web/index.html` | FastAPI + dashboard |
+| Data | `bot/data.py` | Candles for entry + higher timeframe: Twelve Data (free, no broker), OANDA, or synthetic demo |
+| Signals | `bot/signals.py` | Confluence scoring: trend factors (EMA stack, ADX/DI, MACD, pullbacks) vs range factors (Bollinger+RSI, stochastic) picked by regime, candle patterns, higher-timeframe filter, ATR-based stop/target (1:2) |
+| AI analyst | `bot/ai.py` | Pluggable provider (Claude, OpenAI, Gemini, Ollama). Gives TAKE/SKIP/WATCH, key risk and invalidation for each signal. Optional |
+| Track record | `bot/tracker.py` | Logs every signal and later grades it win/loss (stop wins ties). The real test of whether to trust the bot |
+| Backtest | `bot/backtest.py` | Replays the rules on history with spread, next-bar fills, no lookahead, plus walk-forward folds |
+| App | `bot/api.py`, `web/index.html`, `android/` | FastAPI server, web dashboard, Android app with push notifications |
 
-## Going live safely
-1. Backtest each pair on real OANDA data, including walk-forward. Distrust any edge that appears in only one fold.
-2. Run on an OANDA **practice** account (`OANDA_ENV=practice`) for weeks.
-3. Live needs all of: `BOT_MODE=live`, `LIVE_TRADING_CONFIRM=I-ACCEPT-THE-RISK`, OANDA keys.
-   Start with tiny risk (`RISK_PER_TRADE=0.0025`).
+The server checks all pairs every 15 minutes, even when no app is open. New signals get AI commentary
+automatically and trigger a notification on your phone.
 
-## Honest limits
-No bot guarantees profit; most retail forex traders lose money. This tool enforces discipline
-(sizing, stops, loss limits) and gives you evidence, but the rules here are a starting point
-that you must validate on real data. Not financial advice.
+## Using it well
+1. Run **backtests with walk-forward** on each pair. Distrust an edge that shows in only one fold.
+2. Let the **track record** build for a few weeks. Don't trade the signals until 30+ closed signals show a result you'd accept.
+3. Always use the stop loss it gives, and risk a small fixed % per trade.
 
 ## Android app
-`android/` is a native Kotlin/Jetpack Compose app that remote-controls this server: live signals,
-AI analysis, backtests, account/trades, auto-trade switch and push notifications for new signals.
-Broker and AI keys stay on the server.
+`android/` is a native Kotlin app: live signals, AI analysis, backtests, track record, notifications.
+Get the APK from the GitHub Actions run (artifact `forex-ai-bot-debug-apk`). In the app: Settings -> server
+URL (https) + API token. See `RUN_ON_PC.md` for the free HTTPS tunnel.
 
-1. Run the server on an always-on machine with `HOST=0.0.0.0 API_TOKEN=<long random> python run.py`
-   and put it behind HTTPS (e.g. a Cloudflare Tunnel or Tailscale Funnel / reverse proxy).
-2. Get the APK: GitHub Actions workflow **Build Android APK** → artifact `forex-ai-bot-debug-apk`
-   (or open `android/` in Android Studio and press Run).
-3. In the app: Settings → server URL + API token → Save & connect.
+## Honest limits
+No system predicts the market. Most retail forex traders lose money. The AI gives a second opinion, not
+foresight. Not financial advice.
