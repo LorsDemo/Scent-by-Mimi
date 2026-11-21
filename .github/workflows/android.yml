@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r trading-bot/requirements.txt httpx
-      - run: cd trading-bot && pytest -q
+      - run: cd trading-bot && python -m pytest -q
 
   apk:
     runs-on: ubuntu-latest
@@ -21,7 +21,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: "17" }
-      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: "8.9" }
       - name: Build debug APK
