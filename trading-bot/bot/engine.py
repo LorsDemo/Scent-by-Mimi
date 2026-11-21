@@ -1,7 +1,7 @@
 import datetime as dt
 import threading
 import time
-from .data import OandaData, get_frames
+from .data import make_source, get_frames, OandaData
 from .signals import build_signal
 from .risk import RiskManager, units_for_risk
 from .broker import PaperBroker, OandaBroker
@@ -11,7 +11,7 @@ from . import ai
 class Engine:
     def __init__(self, cfg):
         self.cfg = cfg
-        self.src = OandaData(cfg) if cfg.has_oanda else None
+        self.src = make_source(cfg)
         self.broker = OandaBroker(cfg) if cfg.live_enabled else PaperBroker(cfg.start_balance)
         self.risk = RiskManager(cfg)
         self.signals, self.log = {}, []
@@ -24,7 +24,7 @@ class Engine:
 
     @property
     def data_source(self):
-        return "oanda" if self.src else "synthetic-demo"
+        return type(self.src).__name__.replace("Data", "").lower() if self.src else "synthetic-demo"
 
     def analyze(self, pair, with_ai=False, question=None):
         df, htf = get_frames(self.cfg, pair, 500, self.src)

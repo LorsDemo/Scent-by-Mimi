@@ -1,3 +1,5 @@
+import threading
+import time
 import numpy as np
 import pandas as pd
 import requests
@@ -22,6 +24,57 @@ class OandaData:
         df = pd.DataFrame(rows)
         df["time"] = pd.to_datetime(df["time"])
         return df.set_index("time")
+
+
+class TwelveData:
+    """Free-tier friendly forex candles (https://twelvedata.com). No broker account needed.
+
+    Free plan allows ~8 requests/minute, so calls are throttled and cached.
+    """
+    URL = "https://api.twelvedata.com/time_series"
+    TF = {"M15": "15min", "H1": "1h", "H4": "4h", "D": "1day"}
+    TTL = {"M15": 240, "H1": 600, "H4": 1800, "D": 3600}   # seconds
+    MIN_GAP = 7.6                                          # => <= 8 calls/min
+
+    def __init__(self, cfg):
+        self.key = cfg.twelve_key
+        self._cache, self._last, self._lock = {}, 0.0, threading.Lock()
+
+    def candles(self, pair, tf="H1", count=500) -> pd.DataFrame:
+        k = (pair, tf, count)
+        hit = self._cache.get(k)
+        if hit and time.time() - hit[0] < self.TTL.get(tf, 600):
+            return hit[1]
+        with self._lock:
+            wait = self.MIN_GAP - (time.time() - self._last)
+            if wait > 0:
+                time.sleep(wait)
+            self._last = time.time()
+            r = requests.get(self.URL, timeout=20, params={
+                "symbol": pair.replace("_", "/"), "interval": self.TF[tf], "outputsize": count,
+                "order": "ASC", "timezone": "UTC", "apikey": self.key})
+        r.raise_for_status()
+        j = r.json()
+        if j.get("status") == "error" or "values" not in j:
+            raise RuntimeError(f"Twelve Data: {j.get('message', 'unknown error')}")
+        df = pd.DataFrame(j["values"])
+        for c in ("open", "high", "low", "close"):
+            df[c] = df[c].astype(float)
+        df["volume"] = 0
+        df["time"] = pd.to_datetime(df["datetime"], utc=True)
+        df = df.set_index("time")[["open", "high", "low", "close", "volume"]].sort_index()
+        self._cache[k] = (time.time(), df)
+        return df
+
+
+def make_source(cfg):
+    """Pick the market-data source. Returns None => synthetic demo data."""
+    p = cfg.data_provider
+    if p == "oanda" or (p == "auto" and cfg.has_oanda):
+        return OandaData(cfg)
+    if p == "twelvedata" or (p == "auto" and cfg.twelve_key):
+        return TwelveData(cfg)
+    return None
 
 
 def synthetic(pair="EUR_USD", n=3000, seed=1, tf_minutes=60) -> pd.DataFrame:

@@ -16,7 +16,7 @@ Without keys it runs on **synthetic demo data** (clearly flagged in the UI; auto
 ## How it works
 | Layer | File | What it does |
 |---|---|---|
-| Data | `bot/data.py` | OANDA candles (entry + higher timeframe) |
+| Data | `bot/data.py` | Pluggable candles (entry + higher timeframe): Twelve Data (free, no broker), OANDA, or synthetic demo |
 | Signals | `bot/signals.py` | Confluence scoring: trend (EMA stack, ADX/DI, MACD, pullbacks) vs range (Bollinger+RSI, stochastic) chosen by ADX regime, candle patterns, higher-timeframe filter, ATR stops, 1:2 R:R |
 | Risk | `bot/risk.py` | % risk position sizing, max open trades, daily loss halt |
 | Backtest | `bot/backtest.py` | Next-bar-open fills, spread cost, SL-first on ambiguous bars, no lookahead, walk-forward folds |

@@ -71,7 +71,7 @@ def backtest(pair: str, walk: bool = False):
 def auto(action: str):
     if action == "start":
         if not eng.src:
-            raise HTTPException(400, "Auto-trading needs real market data: set OANDA_API_KEY/OANDA_ACCOUNT_ID.")
+            raise HTTPException(400, "Auto-trading needs real market data: set TWELVEDATA_API_KEY (free) or OANDA keys.")
         eng.start()
     elif action == "stop":
         eng.stop()

@@ -46,7 +46,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const f=(v,p)=>v==null?'':(+v).toFixed(p);
 async function status(){const s=await j('/api/status');
  $('mode').textContent=s.mode;$('mode').className='pill '+(s.mode==='LIVE'?'live':'');
- $('src').textContent='data: '+s.data_source;$('src').className='pill '+(s.data_source!=='oanda'?'warn':'');
+ $('src').textContent='data: '+s.data_source;$('src').className='pill '+(s.data_source.startsWith('synthetic')?'warn':'');
  $('aiflag').textContent=s.ai_enabled?'AI on':'AI off';$('tf').textContent='· '+s.timeframe+' · min score '+s.min_score;
  $('autoBtn').textContent='Auto: '+(s.auto?'on':'off');$('autoBtn').dataset.on=s.auto;
  const a=s.account,pl=a.equity-(a.balance??a.equity);
@@ -66,7 +66,7 @@ async function bt(walk){if(!sel)return;$('bt').textContent='Running…';
  try{const d=await j('/api/backtest/'+sel+(walk?'?walk=true':''));const r=d.result;
  if(!r.trades){$('bt').textContent='No trades generated.';return}
  $('bt').innerHTML=`<div class="kpi"><div><b>${r.trades}</b><span>Trades</span></div><div><b>${r.win_rate}%</b><span>Win rate</span></div><div><b>${r.profit_factor}</b><span>Profit factor</span></div><div><b>${r.expectancy_R}R</b><span>Expectancy</span></div><div><b class="${r.net_return_pct>=0?'up':'dn'}">${r.net_return_pct}%</b><span>Return</span></div><div><b class="dn">${r.max_drawdown_pct}%</b><span>Max drawdown</span></div></div>`
- +(d.data_source!=='oanda'?'<p class="note">⚠ Synthetic demo data — results mean nothing. Connect OANDA for real backtests.</p>':'')
+ +(d.data_source.startsWith('synthetic')?'<p class="note">⚠ Synthetic demo data — results mean nothing. Connect OANDA for real backtests.</p>':'')
  +(d.walk_forward?`<p class="note">Walk-forward folds (return %): ${d.walk_forward.map(w=>w.net_return_pct??'n/a').join(' · ')} — an edge that exists in only one fold is likely luck.</p>`:'');
  draw(r.equity_curve)}catch(e){$('bt').textContent=e.message}}
 $('btBtn').onclick=()=>bt(false);$('wfBtn').onclick=()=>bt(true);

@@ -27,6 +27,9 @@ class Config:
     oanda_key: str = os.getenv("OANDA_API_KEY", "")
     oanda_account: str = os.getenv("OANDA_ACCOUNT_ID", "")
     oanda_env: str = os.getenv("OANDA_ENV", "practice")
+    # Market data: auto | oanda | twelvedata | synthetic   (auto = first one configured)
+    data_provider: str = os.getenv("DATA_PROVIDER", "auto").lower()
+    twelve_key: str = os.getenv("TWELVEDATA_API_KEY", "")
     # AI provider: anthropic | openai | gemini | ollama | none
     ai_provider: str = os.getenv("AI_PROVIDER", "anthropic").lower()
     ai_key: str = os.getenv("AI_API_KEY") or os.getenv("ANTHROPIC_API_KEY", "")

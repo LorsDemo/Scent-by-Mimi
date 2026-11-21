@@ -115,7 +115,7 @@ class MainVM(app: Application) : AndroidViewModel(app) {
             val folds = (0 until w.length()).joinToString(" | ") { w.getJSONObject(it).opt("net_return_pct")?.toString() ?: "n/a" }
             sb.append("\n\nWalk-forward folds (return %): $folds\nAn edge present in only one fold is probably luck.")
         }
-        if (d.optString("data_source") != "oanda") sb.append("\n\nSYNTHETIC DEMO DATA: results are meaningless.")
+        if (d.optString("data_source").startsWith("synthetic")) sb.append("\n\nSYNTHETIC DEMO DATA: results are meaningless.")
         btText = sb.toString()
     }
 

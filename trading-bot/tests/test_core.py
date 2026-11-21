@@ -90,3 +90,36 @@ def test_ai_provider_selection_and_openai_compat(monkeypatch):
     import pytest
     with pytest.raises(ValueError):
         ai.complete(Config(ai_provider="bogus", ai_key="k"), "s", "p")
+
+
+def test_twelvedata_source_parsing_cache_and_selection(monkeypatch):
+    import requests
+    from bot.data import TwelveData, make_source, OandaData
+    calls = []
+
+    class R:
+        def __init__(s, j): s.j = j
+        def raise_for_status(s): pass
+        def json(s): return s.j
+
+    def fake_get(url, params=None, timeout=None, headers=None):
+        calls.append(params)
+        if params["apikey"] == "bad":
+            return R({"status": "error", "message": "invalid key"})
+        return R({"status": "ok", "values": [
+            {"datetime": "2025-01-01 01:00:00", "open": "1.1", "high": "1.2", "low": "1.0", "close": "1.15"},
+            {"datetime": "2025-01-01 00:00:00", "open": "1.0", "high": "1.1", "low": "0.9", "close": "1.1"}]})
+    monkeypatch.setattr(requests, "get", fake_get)
+    monkeypatch.setattr(TwelveData, "MIN_GAP", 0)
+    td = TwelveData(Config(twelve_key="k"))
+    df = td.candles("EUR_USD", "H1", 2)
+    assert list(df["close"]) == [1.1, 1.15] and df.index.is_monotonic_increasing   # sorted oldest first
+    assert calls[0]["symbol"] == "EUR/USD" and calls[0]["interval"] == "1h"
+    td.candles("EUR_USD", "H1", 2)
+    assert len(calls) == 1                                                        # cached
+    import pytest
+    with pytest.raises(RuntimeError, match="invalid key"):
+        TwelveData(Config(twelve_key="bad")).candles("EUR_USD", "H1", 2)
+    assert isinstance(make_source(Config(twelve_key="k", data_provider="auto")), TwelveData)
+    assert isinstance(make_source(Config(oanda_key="a", oanda_account="b", twelve_key="k")), OandaData)
+    assert make_source(Config(twelve_key="", oanda_key="", data_provider="auto")) is None
