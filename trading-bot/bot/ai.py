@@ -24,6 +24,23 @@ OPENAI_COMPAT = {
 }
 
 
+_MODEL_CACHE = {}
+_SKIP = ("lite", "image", "tts", "audio", "live", "embed", "vision", "exp", "thinking", "robotics")
+
+
+def _discover_model(provider, base, headers) -> str:
+    import requests
+    r = requests.get(base + "/models", headers=headers, timeout=30)
+    r.raise_for_status()
+    ids = [m["id"].split("/")[-1] for m in r.json().get("data", [])]
+    want = "flash" if provider == "gemini" else ""
+    ok = [i for i in ids if want in i and not any(x in i for x in _SKIP)]
+    stable = [i for i in ok if "preview" not in i] or ok
+    if not stable:
+        raise RuntimeError(f"No suitable model found. Set AI_MODEL to one of: {', '.join(ids[:25])}")
+    return sorted(stable, reverse=True)[0]
+
+
 def enabled(cfg) -> bool:
     return cfg.ai_enabled
 
@@ -38,12 +55,23 @@ def complete(cfg, system, prompt) -> str:
         return msg.content[0].text
     if cfg.ai_provider in OPENAI_COMPAT:
         import requests
-        base, model = OPENAI_COMPAT[cfg.ai_provider]
-        r = requests.post((cfg.ai_base_url or base).rstrip("/") + "/chat/completions",
-                          headers={"Authorization": f"Bearer {cfg.ai_key or 'none'}"}, timeout=60,
-                          json={"model": cfg.ai_model or model, "max_tokens": 600, "temperature": 0.2,
-                                "messages": [{"role": "system", "content": system},
-                                             {"role": "user", "content": prompt}]})
+        base, default_model = OPENAI_COMPAT[cfg.ai_provider]
+        base = (cfg.ai_base_url or base).rstrip("/")
+        headers = {"Authorization": f"Bearer {cfg.ai_key or 'none'}"}
+        model = cfg.ai_model or _MODEL_CACHE.get(cfg.ai_provider) or default_model
+
+        def call(m):
+            return requests.post(base + "/chat/completions", headers=headers, timeout=60, json={
+                "model": m, "max_tokens": 1500, "temperature": 0.2,
+                "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]})
+
+        r = call(model)
+        if r.status_code == 404 and not cfg.ai_model:
+            # default model retired/unavailable: ask the provider what this key can use
+            model = _discover_model(cfg.ai_provider, base, headers)
+            r = call(model)
+            if r.ok:
+                _MODEL_CACHE[cfg.ai_provider] = model
         r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"]
     raise ValueError(f"Unknown AI_PROVIDER '{cfg.ai_provider}' (use anthropic, openai, gemini, ollama, none)")

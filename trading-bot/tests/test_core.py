@@ -151,3 +151,35 @@ def test_ai_failure_returns_readable_error_not_crash(monkeypatch):
     sig = build_signal("EUR_USD", df, resample(df, "4h"))
     out = ai.analyze(Config(ai_provider="gemini", ai_key="bad"), sig, df)
     assert out["verdict"] == "ERROR" and "API key not valid" in out["summary"]
+
+
+def test_ai_auto_discovers_model_when_default_is_retired(monkeypatch):
+    import requests
+    from bot import ai
+    ai._MODEL_CACHE.clear()
+    sent = []
+
+    class R:
+        def __init__(s, code, j): s.status_code, s.j, s.ok = code, j, code < 400; s.text = ""
+        def raise_for_status(s):
+            if not s.ok: raise requests.HTTPError("err", response=s)
+        def json(s): return s.j
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        sent.append(json["model"])
+        if json["model"] == "gemini-2.0-flash":
+            return R(404, {})
+        return R(200, {"choices": [{"message": {"content": "ok"}}]})
+
+    def fake_get(url, headers=None, timeout=None):
+        return R(200, {"data": [{"id": "models/gemini-2.5-flash-lite"}, {"id": "models/gemini-2.5-flash"},
+                                {"id": "models/gemini-2.5-pro"}, {"id": "models/gemini-3-flash-preview"},
+                                {"id": "models/gemini-2.0-flash-001"}]})
+    monkeypatch.setattr(requests, "post", fake_post)
+    monkeypatch.setattr(requests, "get", fake_get)
+    cfg = Config(ai_provider="gemini", ai_key="k", ai_model="")
+    assert ai.complete(cfg, "s", "p") == "ok"
+    assert sent == ["gemini-2.0-flash", "gemini-2.5-flash"]     # lite/preview/pro skipped, newest stable flash chosen
+    ai.complete(cfg, "s", "p")
+    assert sent[-1] == "gemini-2.5-flash" and len(sent) == 3      # cached, no second 404
+    ai._MODEL_CACHE.clear()
