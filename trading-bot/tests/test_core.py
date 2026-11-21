@@ -59,6 +59,7 @@ def test_ai_provider_selection_and_openai_compat(monkeypatch):
     seen = {}
 
     class R:
+        status_code, ok = 200, True
         def raise_for_status(self): pass
         def json(self): return {"choices": [{"message": {"content": '{"verdict":"TAKE","confidence":70,"summary":"s","key_risk":"r","invalidation":"i"}'}}]}
 
