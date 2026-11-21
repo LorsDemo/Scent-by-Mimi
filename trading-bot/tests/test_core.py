@@ -51,3 +51,14 @@ def test_backtest_runs_and_no_lookahead_equity_consistent():
     assert r["trades"] > 0
     assert r["max_drawdown_pct"] >= 0
     assert r["final_equity"] > 0
+
+
+def test_api_token_enforced(monkeypatch):
+    from fastapi.testclient import TestClient
+    import bot.api as api
+    monkeypatch.setattr(api, "API_TOKEN", "s3cret")
+    c = TestClient(api.app)
+    assert c.get("/api/status").status_code == 401
+    assert c.get("/api/status", headers={"X-API-Key": "wrong"}).status_code == 401
+    assert c.get("/api/status", headers={"X-API-Key": "s3cret"}).status_code == 200
+    assert c.get("/").status_code == 200        # dashboard shell loads without token

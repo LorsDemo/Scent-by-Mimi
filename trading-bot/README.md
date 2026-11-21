@@ -34,3 +34,14 @@ Without keys it runs on **synthetic demo data** (clearly flagged in the UI; auto
 No bot guarantees profit; most retail forex traders lose money. This tool enforces discipline
 (sizing, stops, loss limits) and gives you evidence, but the rules here are a starting point
 that you must validate on real data. Not financial advice.
+
+## Android app
+`android/` is a native Kotlin/Jetpack Compose app that remote-controls this server: live signals,
+AI analysis, backtests, account/trades, auto-trade switch and push notifications for new signals.
+Broker and AI keys stay on the server.
+
+1. Run the server on an always-on machine with `HOST=0.0.0.0 API_TOKEN=<long random> python run.py`
+   and put it behind HTTPS (e.g. a Cloudflare Tunnel or Tailscale Funnel / reverse proxy).
+2. Get the APK: GitHub Actions workflow **Build Android APK** → artifact `forex-ai-bot-debug-apk`
+   (or open `android/` in Android Studio and press Run).
+3. In the app: Settings → server URL + API token → Save & connect.
