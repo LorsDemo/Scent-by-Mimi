@@ -132,3 +132,22 @@ def test_tracker_records_once_and_grades_outcomes(tmp_path):
     t.resolve("GBP_USD", df2)
     assert t.items[1]["status"] == "loss"
     assert t.summary()["win_rate"] == 50.0
+
+
+def test_ai_failure_returns_readable_error_not_crash(monkeypatch):
+    import requests
+    from bot import ai
+
+    class Resp:
+        text = '{"error":{"message":"API key not valid"}}'
+
+    class Boom(requests.HTTPError):
+        pass
+
+    def fake_post(*a, **k):
+        e = Boom("400 Client Error"); e.response = Resp(); raise e
+    monkeypatch.setattr(requests, "post", fake_post)
+    df = synthetic(n=400)
+    sig = build_signal("EUR_USD", df, resample(df, "4h"))
+    out = ai.analyze(Config(ai_provider="gemini", ai_key="bad"), sig, df)
+    assert out["verdict"] == "ERROR" and "API key not valid" in out["summary"]

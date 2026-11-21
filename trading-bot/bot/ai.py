@@ -57,7 +57,16 @@ def analyze(cfg, sig, df, question=None):
     ctx = {"signal": sig.to_dict(), "indicators": snapshot(df),
            "recent_closes": [round(float(v), 5) for v in df["close"].tail(20)]}
     prompt = json.dumps(ctx) + (f"\nUser question: {question}" if question else "")
-    text = complete(cfg, SYSTEM, prompt).strip()
+    try:
+        text = complete(cfg, SYSTEM, prompt).strip()
+    except Exception as e:      # show the real reason instead of a bare 500 error
+        detail = f"{type(e).__name__}: {e}"
+        resp = getattr(e, "response", None)
+        if resp is not None:
+            detail += f" | {resp.text[:300]}"
+        return {"verdict": "ERROR", "confidence": 0, "key_risk": "", "invalidation": "",
+                "summary": f"The AI call failed ({cfg.ai_provider}, model "
+                           f"{cfg.ai_model or 'default'}). {detail}"}
     try:
         return json.loads(text[text.index("{"): text.rindex("}") + 1])
     except Exception:

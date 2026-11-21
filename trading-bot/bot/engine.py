@@ -55,7 +55,11 @@ class Engine:
                 if new:
                     self.note(f"NEW {sig.side} {p} score {sig.score}")
                     if ai.enabled(self.cfg):
-                        self.tracker.attach_ai(item["id"], ai.analyze(self.cfg, sig, df))
+                        res = ai.analyze(self.cfg, sig, df)
+                        if res.get("verdict") == "ERROR":
+                            self.note(f"AI error: {res['summary'][:200]}")
+                        else:
+                            self.tracker.attach_ai(item["id"], res)
             except Exception as e:
                 self.note(f"{p} error: {e}")
 
